@@ -249,31 +249,56 @@ function initializeGitRepo() {
         execSync('git status', { stdio: 'ignore' });
         console.log('📁 Git repo już istnieje');
 
-        // Sprawdź konfigurację
+        // Konfiguruj git user (zawsze na Render)
         try {
-            const userName = execSync('git config user.name', { encoding: 'utf8' }).trim();
-            const userEmail = execSync('git config user.email', { encoding: 'utf8' }).trim();
-            console.log(`👤 Git user: ${userName} <${userEmail}>`);
+            execSync('git config user.name "Yuta1111x"', { stdio: 'pipe' });
+            execSync('git config user.email "yoyuta1111x@gmail.com"', { stdio: 'pipe' });
+            console.log(`👤 Git user skonfigurowany: Yuta1111x <yoyuta1111x@gmail.com>`);
         } catch (e) {
-            console.log('⚠️  Git user nie jest skonfigurowany');
+            console.log('⚠️  Błąd konfiguracji git user:', e.message);
         }
 
-        // Sprawdź remote
+        // Sprawdź i napraw remote origin
         try {
             const remoteUrl = execSync('git config --get remote.origin.url', { encoding: 'utf8' }).trim();
             const githubToken = process.env.GITHUB_TOKEN;
             const displayUrl = githubToken ? remoteUrl.replace(githubToken, '***TOKEN***') : remoteUrl;
             console.log(`🔗 Remote origin: ${displayUrl}`);
         } catch (e) {
-            console.log('⚠️  Remote origin nie jest skonfigurowany');
+            console.log('⚠️  Remote origin nie jest skonfigurowany - dodaję...');
+            
+            // Dodaj remote origin
+            try {
+                const githubToken = process.env.GITHUB_TOKEN;
+                const repoUrl = githubToken 
+                    ? `https://${githubToken}@github.com/Yuta1111x/cmds.git`
+                    : 'https://github.com/Yuta1111x/cmds.git';
+                
+                execSync(`git remote add origin "${repoUrl}"`, { stdio: 'pipe' });
+                console.log('✅ Remote origin dodany: https://github.com/Yuta1111x/cmds.git');
+            } catch (addError) {
+                console.log('❌ Błąd dodawania remote:', addError.message);
+            }
         }
 
-        // Sprawdź branch
+        // Sprawdź branch i napraw jeśli potrzeba (Render problem)
         try {
             const currentBranch = execSync('git branch --show-current', { encoding: 'utf8' }).trim();
-            console.log(`🌿 Aktualny branch: ${currentBranch}`);
+            if (currentBranch) {
+                console.log(`🌿 Aktualny branch: ${currentBranch}`);
+            } else {
+                console.log('⚠️  Detached HEAD (Render) - naprawiam...');
+                try {
+                    // Sprawdź czy jesteśmy na main
+                    const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+                    execSync('git checkout -b main', { stdio: 'pipe' });
+                    console.log('✅ Branch main utworzony z aktualnego commit');
+                } catch (branchError) {
+                    console.log('❌ Błąd naprawy branch:', branchError.message);
+                }
+            }
         } catch (e) {
-            console.log('⚠️  Nie można określić aktualnego branch');
+            console.log('⚠️  Błąd sprawdzania branch:', e.message);
         }
 
     } catch (error) {
