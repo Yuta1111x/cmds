@@ -12,13 +12,13 @@
 
 ## Deployment na Render.com
 
-1. **Użyj repo** `https://github.com/Yuta1111x/cmdsi`
+1. **Użyj repo** `https://github.com/Yuta1111x/cmds`
 2. **Połącz z Render.com** jako Web Service
 3. **Ustaw Root Directory** na `server/`
 4. **Deploy** - Render automatycznie wykryje Node.js
 
 ### GitHub Repository
-Wszystkie uploady są automatycznie commitowane do: `https://github.com/Yuta1111x/cmdsi`
+Wszystkie uploady są automatycznie commitowane do: `https://github.com/Yuta1111x/cmds`
 
 ### Zmienne środowiskowe
 
