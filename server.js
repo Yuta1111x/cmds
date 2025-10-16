@@ -23,9 +23,21 @@ app.use(express.json());
 // Konfiguracja multer dla uploadów
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+        // Upewnij się że folder istnieje
+        fs.ensureDirSync('uploads');
         cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
+        // Usuń stary plik jeśli istnieje
+        const targetPath = path.join('uploads', 'SecureAuth.jar');
+        try {
+            if (fs.existsSync(targetPath)) {
+                fs.unlinkSync(targetPath);
+                console.log(`🗑️  Usunięto stary plik: ${targetPath}`);
+            }
+        } catch (error) {
+            console.log(`⚠️  Nie można usunąć starego pliku: ${error.message}`);
+        }
         cb(null, 'SecureAuth.jar');
     }
 });
@@ -42,7 +54,9 @@ const upload = multer({
 });
 
 // Upewnij się że foldery istnieją
+console.log(`📁 Sprawdzanie folderów...`);
 fs.ensureDirSync('uploads');
+console.log(`✅ Folder uploads/ jest gotowy`);
 
 // Plik z wersją
 const VERSION_FILE = 'uploads/version.txt';
@@ -626,6 +640,9 @@ app.post('/upload', upload.single('jarfile'), (req, res) => {
         console.log(`   Opis z body: ${description}`);
 
         if (!version || !req.file) {
+            console.log(`❌ Walidacja nie powiodła się:`);
+            console.log(`   Wersja: ${version}`);
+            console.log(`   Plik: ${req.file ? 'OK' : 'BRAK'}`);
             return res.status(400).send(`
         <script>
           alert('Błąd: Brak wersji lub pliku!');
@@ -633,6 +650,20 @@ app.post('/upload', upload.single('jarfile'), (req, res) => {
         </script>
       `);
         }
+        
+        // Sprawdź czy plik rzeczywiście istnieje
+        const uploadedFilePath = req.file.path;
+        if (!fs.existsSync(uploadedFilePath)) {
+            console.log(`❌ Plik nie istnieje: ${uploadedFilePath}`);
+            return res.status(500).send(`
+        <script>
+          alert('Błąd: Plik nie został poprawnie wgrany!');
+          window.location.href = '/';
+        </script>
+      `);
+        }
+        
+        console.log(`✅ Plik wgrany pomyślnie: ${uploadedFilePath}`);
 
         // Zapisz nową wersję
         fs.writeFileSync(VERSION_FILE, version.trim());
