@@ -192,8 +192,17 @@ async function commitToGitHub(version, description) {
                 const targetUrl = `https://${githubToken}@github.com/Yuta1111x/cmds.git`;
                 execSync(`git remote set-url origin "${targetUrl}"`, { stdio: 'pipe' });
                 console.log(`🔑 Remote URL ustawiony na: https://github.com/Yuta1111x/cmds.git`);
+                
+                // Test połączenia z GitHub
+                console.log(`🧪 Test połączenia z GitHub...`);
+                const remoteTest = execSync('git ls-remote origin', { encoding: 'utf8', stdio: 'pipe' });
+                console.log(`✅ Połączenie z GitHub OK`);
+                
             } catch (remoteError) {
-                console.log(`⚠️  Błąd konfiguracji remote URL: ${remoteError.message}`);
+                console.log(`⚠️  Błąd konfiguracji/testu remote: ${remoteError.message}`);
+                if (remoteError.stderr) {
+                    console.log(`   STDERR: ${remoteError.stderr}`);
+                }
             }
         } else {
             // Bez tokenu - ustaw podstawowy URL
@@ -206,10 +215,31 @@ async function commitToGitHub(version, description) {
             }
         }
 
+        // Sprawdź aktualny branch przed push
+        try {
+            const currentBranch = execSync('git branch --show-current', { encoding: 'utf8' }).trim();
+            console.log(`🌿 Push z branch: ${currentBranch || 'DETACHED HEAD'}`);
+            
+            if (!currentBranch) {
+                console.log(`⚠️  Detached HEAD - przełączam na main...`);
+                execSync('git checkout main', { stdio: 'pipe' });
+            }
+        } catch (branchError) {
+            console.log(`⚠️  Błąd sprawdzania branch: ${branchError.message}`);
+        }
+
         // Push do origin main
         console.log(`🚀 Pushowanie do GitHub...`);
         const pushOutput = execSync('git push origin main', { encoding: 'utf8', stdio: 'pipe' });
         console.log(`📤 Push output: ${pushOutput}`);
+        
+        // Sprawdź czy push się udał
+        try {
+            const remoteCommit = execSync('git ls-remote origin main', { encoding: 'utf8' }).trim();
+            console.log(`🔍 Remote commit po push: ${remoteCommit.substring(0, 8)}...`);
+        } catch (remoteError) {
+            console.log(`⚠️  Nie można sprawdzić remote commit: ${remoteError.message}`);
+        }
 
         const duration = Date.now() - startTime;
         console.log(`✅ [${new Date().toISOString()}] Wersja ${version} została pomyślnie commitowana do GitHub! (${duration}ms)`);
@@ -289,12 +319,17 @@ function initializeGitRepo() {
             } else {
                 console.log('⚠️  Detached HEAD (Render) - naprawiam...');
                 try {
-                    // Sprawdź czy jesteśmy na main
-                    const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-                    execSync('git checkout -b main', { stdio: 'pipe' });
-                    console.log('✅ Branch main utworzony z aktualnego commit');
-                } catch (branchError) {
-                    console.log('❌ Błąd naprawy branch:', branchError.message);
+                    // Spróbuj checkout na main
+                    execSync('git checkout main', { stdio: 'pipe' });
+                    console.log('✅ Przełączono na branch main');
+                } catch (checkoutError) {
+                    try {
+                        // Jeśli main nie istnieje, utwórz go
+                        execSync('git checkout -b main', { stdio: 'pipe' });
+                        console.log('✅ Branch main utworzony');
+                    } catch (createError) {
+                        console.log('❌ Błąd naprawy branch:', createError.message);
+                    }
                 }
             }
         } catch (e) {
